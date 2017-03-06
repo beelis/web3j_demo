@@ -23,15 +23,14 @@ import org.web3j.utils.Convert;
  */
 public class HelloWorld {
 
-	static final BigInteger GAS_PRICE = BigInteger.valueOf(20_000_000_000L);
-	static final BigInteger GAS_LIMIT = BigInteger.valueOf(4_300_000L);
+	static final BigInteger GAS_PRICE = BigInteger.valueOf(9_000L);
+	static final BigInteger GAS_LIMIT = BigInteger.valueOf(1_000_000L);
 
 	static Web3j web3j = null;
 
 	public static void main(String [] args) throws Exception  {
 		String port = "8545";
-		String ip = "localhost";
-		
+		String ip = "172.17.0.2";
 		if(args.length >= 1) { port = args[0]; }
 		if(args.length >= 2) { ip = args[1]; }
 		
@@ -48,20 +47,27 @@ public class HelloWorld {
 		Web3ClientVersion client = web3j.web3ClientVersion().sendAsync().get();
 		System.out.println("Connected to " + client.getWeb3ClientVersion());
 
-		EthCoinbase coinbase = web3j.ethCoinbase().sendAsync().get();
 		EthAccounts accounts = web3j.ethAccounts().sendAsync().get();
 
-		String address = accounts.getResult().get(1);
-		BigInteger value = Convert.toWei("0.123", Convert.Unit.ETHER)
+		String sendingAddress = accounts.getResult().get(0);
+		String receivingAddress = accounts.getResult().get(1);
+		BigInteger value = Convert.toWei("0.124", Convert.Unit.ETHER)
 				.toBigInteger();
 		
-		System.out.println("Account " + address + "\n" + 
-				"Balance before Tx: " + getBalance(address));
+		System.out.println("Before TX:");
+		printAccountBallance(sendingAddress, "sendingAddress");
+		printAccountBallance(receivingAddress, "receivingAddress");
 
-		String txHash = transfer(coinbase.getAddress(), address, value);
+		String txHash = transfer(sendingAddress, receivingAddress, value);
 		waitForReceipt(txHash);
 
-		System.out.println("Balance after Tx: " + getBalance(address));
+		System.out.println("After TX:");
+		printAccountBallance(sendingAddress, "sendingAddress");
+		printAccountBallance(receivingAddress, "receivingAddress");
+		}
+
+	private void printAccountBallance(String address, String accountName) throws Exception {
+		System.out.println(String.format("%s %s balance : %s", accountName, address, getBalance(address)));
 	}
 
 	BigDecimal getBalance(String address) throws Exception {
@@ -90,6 +96,11 @@ public class HelloWorld {
 				.ethSendTransaction(transaction)
 				.sendAsync()
 				.get();
+		
+		if (response.getError() != null) 
+		{
+			throw new RuntimeException("Transaction error: " + response.getError().getMessage());
+		}
 
 		return response.getTransactionHash();
 	}
